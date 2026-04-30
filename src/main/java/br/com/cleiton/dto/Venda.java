@@ -2,6 +2,7 @@ package br.com.cleiton.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 public record Venda(
         Long id,
@@ -13,14 +14,14 @@ public record Venda(
 ) {
 
     public BigDecimal valorTotal(){
-        return valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+        return quantidade == 0 ? BigDecimal.ZERO : valorUnitario.multiply(BigDecimal.valueOf(quantidade));
     }
 
     public boolean vendaValida(){
         return !status.equals(StatusVenda.CANCELADO.name());
     }
 
-    public String mes(){
-        return data.getMonth().name();
+    public YearMonth mes(){
+        return YearMonth.from(data);
     }
 }
