@@ -1,17 +1,33 @@
 package br.com.cleiton;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+import br.com.cleiton.dto.Venda;
+import br.com.cleiton.service.RelatorioVendasService;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
-        }
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+       RelatorioVendasService service = new RelatorioVendasService();
+
+        List<Venda> vendas = List.of(
+                new Venda(1L, "Notebook", 2, new BigDecimal("2500.00"), LocalDate.of(2026,1,15), "CONCLUIDO"),
+                new Venda(2L, "Mouse", 2, new BigDecimal("50.00"), LocalDate.of(2026,1,20), "CONCLUIDO"),
+                new Venda(3L, "Notebook", 1, new BigDecimal("2500.00"), LocalDate.of(2026,2,10), "CANCELADO"),
+                new Venda(4L, "Teclado", 1, new BigDecimal("120.00"), LocalDate.of(2026,2,25), "CONCLUIDO"),
+                new Venda(5L, "Mouse", 1, new BigDecimal("50.00"), LocalDate.of(2026,3,5), "CONCLUIDO")
+        );
+
+        service.valorTotalPorProduto(vendas).forEach((key, value) -> System.out.println(key + ": " + value));
+        System.out.println();
+        System.out.println(service.produtoMaisVendido(vendas).orElse("Nenhum resultado"));
+        System.out.println();
+        System.out.println(service.mesMaiorFaturamento(vendas).orElse(null));
+        System.out.println();
+        service.produtosAcimaDaMedia(vendas).forEach(System.out::println);
     }
 }
