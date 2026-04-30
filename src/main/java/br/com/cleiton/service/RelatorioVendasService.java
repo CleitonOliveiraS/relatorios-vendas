@@ -3,18 +3,20 @@ package br.com.cleiton.service;
 import br.com.cleiton.dto.Venda;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.time.YearMonth;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RelatorioVendasService {
 
-    public Map<String, BigDecimal> valorTotalVendidoPorProduto(List<Venda> vendas) {
+    public static final Comparator<Map.Entry<String, Integer>> POR_QUANTIDADE_MAIOR_E_NOME_CRESCENTE =
+            Map.Entry.<String, Integer>comparingByValue().thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder()));
+
+    public Map<String, BigDecimal> valorTotalPorProduto(List<Venda> vendas) {
 
         return vendas.stream()
                 .filter(Venda::vendaValida)
+                .filter(v -> v.quantidade() > 0)
                 .collect(Collectors.toMap(
                         Venda::produto,
                         Venda::valorTotal,
@@ -22,26 +24,25 @@ public class RelatorioVendasService {
                 ));
     }
 
-    public Map<String, Integer> produtoMaisVendido(List<Venda> vendas) {
+    public Optional<String> produtoMaisVendido(List<Venda> vendas) {
 
-        Map<String, Integer> produtoQuantidade = vendas.stream()
+        return vendas.stream()
                 .filter(Venda::vendaValida)
+                .filter(v -> v.quantidade() > 0)
                 .collect(Collectors.toMap(
                         Venda::produto,
                         Venda::quantidade,
                         Integer::sum))
                 .entrySet()
                 .stream()
-                .max(Map.Entry.comparingByValue())
-                .map(p -> Collections.singletonMap(p.getKey(), p.getValue()))
-                .orElse(Collections.emptyMap());
-
-        return produtoQuantidade;
+                .filter(e -> !e.getValue().equals(0))
+                .max(POR_QUANTIDADE_MAIOR_E_NOME_CRESCENTE)
+                .map(Map.Entry::getKey);
     }
 
-    public Map<String, BigDecimal> mesMaiorFaturamento(List<Venda> vendas) {
+    public Optional<YearMonth> mesMaiorFaturamento(List<Venda> vendas) {
 
-        Map<String, BigDecimal> mesFaturamento = vendas.stream()
+        return vendas.stream()
                 .filter(Venda::vendaValida)
                 .collect(Collectors.toMap(
                         Venda::mes,
@@ -50,16 +51,14 @@ public class RelatorioVendasService {
                 ))
                 .entrySet()
                 .stream()
-                .max(Map.Entry.comparingByValue())
-                .map(e -> Collections.singletonMap(e.getKey(), e.getValue()))
-                .orElse(Collections.emptyMap());
-
-        return mesFaturamento;
+                .filter(e -> e.getValue().compareTo(BigDecimal.ZERO) != 0)
+                .max(Map.Entry.<YearMonth, BigDecimal>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
+                .map(Map.Entry::getKey);
     }
 
-    public List<Venda> produtosAcimaDaMedia(List<Venda> vendas) {
+    public List<String> produtosAcimaDaMedia(List<Venda> vendas) {
 
-        List<Venda> vendasValidas = vendas.stream()
+        var vendasValidas = vendas.stream()
                 .filter(Venda::vendaValida)
                 .toList();
 
@@ -67,20 +66,22 @@ public class RelatorioVendasService {
             return Collections.emptyList();
         }
 
-        BigDecimal valorMedia = vendasValidas.stream()
-                .map(Venda::valorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP)
-                .divide(BigDecimal.valueOf(vendasValidas.size()), 2, RoundingMode.HALF_UP);
+        var mediaProduto = vendasValidas.stream()
+                .collect(
+                        Collectors.groupingBy(
+                                Venda::produto,
+                                Collectors.averagingDouble(Venda::quantidade)
+                        )
+                );
 
-        return vendasValidas.stream()
-                .filter(v -> acimaDaMedia(v.valorTotal(), valorMedia))
+        double mediaGeral = mediaProduto.values().stream().mapToDouble(m -> m).average().orElse(0.0);
+
+        return mediaProduto.entrySet().stream()
+                .filter(m -> m.getValue() > mediaGeral)
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
                 .toList();
 
-    }
-
-    private boolean acimaDaMedia(BigDecimal valorTotal, BigDecimal valorMedia) {
-        return valorTotal.compareTo(valorMedia) > 0;
     }
 
 }
